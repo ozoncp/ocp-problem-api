@@ -3,57 +3,56 @@ package utils
 var stringInnerList = []string{"one", "five", "six"}
 var integerInnerList = []int{1,5,6}
 
-func SplitStringSlice(in []string, size int) (out [][]string) {
+func SplitStringSlice(in []string, size int) [][]string {
 	inSize := len(in)
 	if size >= inSize {
-		out = append(out, in)
-		return
+		return [][]string{in}
 	}
 
-	endIndex := 0
-	for startIndex := 0; startIndex < inSize; startIndex+=size {
+	out := make([][]string, 0, (inSize/size)+1)
+	for startIndex, endIndex := 0, 0; startIndex < inSize; startIndex+=size {
 		endIndex = startIndex + size
 		if endIndex >= inSize {
 			out = append(out, in[startIndex:])
 		} else {
 			out = append(out, in[startIndex:endIndex])
 		}
-	}
-
-	return
-}
-
-func SplitIntegerSlice(in []int, size int) (out [][]int) {
-	inSize := len(in)
-	if size >= inSize {
-		out = append(out, in)
-		return
-	}
-
-	endIndex := 0
-	for startIndex := 0; startIndex < inSize; startIndex+=size {
-		endIndex = startIndex + size
-		if endIndex >= inSize {
-			out = append(out, in[startIndex:])
-		} else {
-			out = append(out, in[startIndex:endIndex])
-		}
-
-	}
-
-	return
-}
-
-func RevertMap(in map[string]string) map[string]string {
-	out := make(map[string]string)
-	for key := range in {
-		out[in[key]] = key
 	}
 
 	return out
 }
 
-func FilterStringSlice(in []string) (out []string) {
+func SplitIntegerSlice(in []int, size int) [][]int {
+	inSize := len(in)
+	if size >= inSize {
+		return [][]int{in}
+	}
+
+	out := make([][]int, 0, (inSize/size)+1)
+	for startIndex, endIndex := 0, 0; startIndex < inSize; startIndex+=size {
+		endIndex = startIndex + size
+		if endIndex >= inSize {
+			out = append(out, in[startIndex:])
+		} else {
+			out = append(out, in[startIndex:endIndex])
+		}
+
+	}
+
+	return out
+}
+
+func RevertMap(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[value] = key
+	}
+
+	return out
+}
+
+func FilterStringSlice(in []string) []string {
+	out := make([]string, 0, len(in))
 	lastIndexInList := len(stringInnerList) - 1
 	for i := range in {
 		for j := range stringInnerList {
@@ -67,13 +66,14 @@ func FilterStringSlice(in []string) (out []string) {
 		}
 	}
 
-	return
+	return out
 }
 
-func FilterIntegerSlice(in []int) (out []int) {
+func FilterIntegerSlice(in []int) []int {
+	out := make([]int, 0, len(in))
 	lastIndexInList := len(integerInnerList) - 1
 	for i := range in {
-		for j := range stringInnerList {
+		for j := range integerInnerList {
 			if integerInnerList[j] == in[i] {
 				break
 			}
@@ -84,5 +84,5 @@ func FilterIntegerSlice(in []int) (out []int) {
 		}
 	}
 
-	return
+	return out
 }

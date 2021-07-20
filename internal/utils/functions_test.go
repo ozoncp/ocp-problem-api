@@ -14,6 +14,14 @@ func TestSplitStringSlice(t *testing.T) {
 	}
 }
 
+func BenchmarkSplitStringSlice(b *testing.B) {
+	in := []string{"one","two","three","four","five","six","seven","eight"}
+	for i := 0; i < b.N; i++ {
+		SplitStringSlice(in, 3)
+	}
+	b.ReportAllocs()
+}
+
 func TestSplitIntegerSlice(t *testing.T) {
 	solution := [][]int{{1,2,3},{4,5,6},{7,8}}
 	in := []int{1,2,3,4,5,6,7,8}
@@ -21,6 +29,14 @@ func TestSplitIntegerSlice(t *testing.T) {
 	if !reflect.DeepEqual(out, solution) {
 		t.Errorf("Invalid split, current value: %v, need: %v", out, solution)
 	}
+}
+
+func BenchmarkSplitIntegerSlice(b *testing.B) {
+	in := []int{1,2,3,4,5,6,7,8}
+	for i := 0; i < b.N; i++ {
+		SplitIntegerSlice(in, 3)
+	}
+	b.ReportAllocs()
 }
 
 func TestRevertMap(t *testing.T) {
@@ -32,7 +48,15 @@ func TestRevertMap(t *testing.T) {
 	}
 }
 
-func TestFilterStringSlice(t *testing.T) {
+func BenchmarkRevertMap(b *testing.B) {
+	in := map[string]string{"n0": "one", "n1": "two", "n2": "tree"}
+	for i := 0; i < b.N; i++ {
+		RevertMap(in)
+	}
+	b.ReportAllocs()
+}
+
+func TestFilterIntegerSlice(t *testing.T) {
 	solution := []int{2,3,4,7,8,9}
 	in := []int{1,2,3,4,5,6,7,8,9}
 	out := FilterIntegerSlice(in)
@@ -41,11 +65,27 @@ func TestFilterStringSlice(t *testing.T) {
 	}
 }
 
-func TestFilterIntegerSlice(t *testing.T) {
+func BenchmarkFilterIntegerSlice(b *testing.B) {
+	in := []int{1,2,3,4,5,6,7,8,9}
+	for i := 0; i < b.N; i++ {
+		FilterIntegerSlice(in)
+	}
+	b.ReportAllocs()
+}
+
+func TestFilterStringSlice(t *testing.T) {
 	solution := []string{"two","three","four","seven","eight"}
 	in := []string{"one","two","three","four","five","six","seven","eight"}
 	out := FilterStringSlice(in)
 	if !reflect.DeepEqual(out, solution) {
 		t.Errorf("Invalid filter, current value: %v, need: %v", out, solution)
 	}
+}
+
+func BenchmarkFilterStringSlice(b *testing.B) {
+	in := []string{"one","two","three","four","five","six","seven","eight"}
+	for i := 0; i < b.N; i++ {
+		FilterStringSlice(in)
+	}
+	b.ReportAllocs()
 }
