@@ -1,17 +1,27 @@
 package utils
 
+import "errors"
+
 var stringInnerList = []string{"one", "five", "six"}
 var integerInnerList = []int{1,5,6}
 
-func SplitStringSlice(in []string, size int) [][]string {
-	inSize := len(in)
-	if size >= inSize {
-		return [][]string{in}
+func SplitStringSlice(in []string, size uint) ([][]string, error) {
+	if in == nil {
+		return nil, errors.New("invalid slice")
 	}
 
-	out := make([][]string, 0, (inSize/size)+1)
-	for startIndex, endIndex := 0, 0; startIndex < inSize; startIndex+=size {
-		endIndex = startIndex + size
+	if size == 0 {
+		return nil, errors.New("invalid size")
+	}
+
+	inSize := len(in)
+	if int(size) >= inSize {
+		return [][]string{in}, nil
+	}
+
+	out := make([][]string, 0, (inSize/int(size))+1)
+	for startIndex, endIndex := 0, 0; startIndex < inSize; startIndex+=int(size) {
+		endIndex = startIndex + int(size)
 		if endIndex >= inSize {
 			out = append(out, in[startIndex:])
 		} else {
@@ -19,18 +29,26 @@ func SplitStringSlice(in []string, size int) [][]string {
 		}
 	}
 
-	return out
+	return out, nil
 }
 
-func SplitIntegerSlice(in []int, size int) [][]int {
-	inSize := len(in)
-	if size >= inSize {
-		return [][]int{in}
+func SplitIntegerSlice(in []int, size uint) ([][]int, error) {
+	if in == nil {
+		return nil, errors.New("invalid slice")
 	}
 
-	out := make([][]int, 0, (inSize/size)+1)
-	for startIndex, endIndex := 0, 0; startIndex < inSize; startIndex+=size {
-		endIndex = startIndex + size
+	if size == 0 {
+		return nil, errors.New("invalid size")
+	}
+
+	inSize := len(in)
+	if int(size) >= inSize {
+		return [][]int{in}, nil
+	}
+
+	out := make([][]int, 0, (inSize/int(size))+1)
+	for startIndex, endIndex := 0, 0; startIndex < inSize; startIndex+=int(size) {
+		endIndex = startIndex + int(size)
 		if endIndex >= inSize {
 			out = append(out, in[startIndex:])
 		} else {
@@ -39,19 +57,27 @@ func SplitIntegerSlice(in []int, size int) [][]int {
 
 	}
 
-	return out
+	return out, nil
 }
 
-func RevertMap(in map[string]string) map[string]string {
+func RevertMap(in map[string]string) (map[string]string, error) {
+	if in == nil {
+		return nil, errors.New("invalid map")
+	}
+
 	out := make(map[string]string, len(in))
 	for key, value := range in {
 		out[value] = key
 	}
 
-	return out
+	return out, nil
 }
 
-func FilterStringSlice(in []string) []string {
+func FilterStringSlice(in []string) ([]string, error) {
+	if in == nil {
+		return nil, errors.New("invalid slice")
+	}
+
 	out := make([]string, 0, len(in))
 	lastIndexInList := len(stringInnerList) - 1
 	for i := range in {
@@ -66,10 +92,14 @@ func FilterStringSlice(in []string) []string {
 		}
 	}
 
-	return out
+	return out, nil
 }
 
-func FilterIntegerSlice(in []int) []int {
+func FilterIntegerSlice(in []int) ([]int, error) {
+	if in == nil {
+		return nil, errors.New("invalid slice")
+	}
+
 	out := make([]int, 0, len(in))
 	lastIndexInList := len(integerInnerList) - 1
 	for i := range in {
@@ -84,5 +114,5 @@ func FilterIntegerSlice(in []int) []int {
 		}
 	}
 
-	return out
+	return out, nil
 }
