@@ -23,9 +23,9 @@ func SplitStringSlice(in []string, size uint) ([][]string, error) {
 	for startIndex, endIndex := 0, 0; startIndex < inSize; startIndex+=int(size) {
 		endIndex = startIndex + int(size)
 		if endIndex >= inSize {
-			out = append(out, in[startIndex:])
+			out = append(out, append(make([]string, 0, size), in[startIndex:]...))
 		} else {
-			out = append(out, in[startIndex:endIndex])
+			out = append(out, append(make([]string, 0, size), in[startIndex:endIndex]...))
 		}
 	}
 
@@ -50,11 +50,10 @@ func SplitIntegerSlice(in []int, size uint) ([][]int, error) {
 	for startIndex, endIndex := 0, 0; startIndex < inSize; startIndex+=int(size) {
 		endIndex = startIndex + int(size)
 		if endIndex >= inSize {
-			out = append(out, in[startIndex:])
+			out = append(out, append(make([]int, 0, size), in[startIndex:]...))
 		} else {
-			out = append(out, in[startIndex:endIndex])
+			out = append(out, append(make([]int, 0, size), in[startIndex:endIndex]...))
 		}
-
 	}
 
 	return out, nil
