@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 )
@@ -35,6 +36,22 @@ func TestGetMapWithIdKey(t *testing.T) {
 
 	if !reflect.DeepEqual(solution, result) {
 		t.Errorf("Invalid result map: %v, need: %v", result, solution)
+	}
+}
+
+func TestGetMapWithIdKeyNilValue(t *testing.T) {
+	checkError := NewExtendedError("problem list is not init")
+	_, err := GetMapWithIdKey(nil)
+	if !errors.Is(checkError, err) {
+		t.Error("Unknown error!")
+	}
+}
+
+func TestGetMapWithIdKeyEmptyValue(t *testing.T) {
+	checkError := NewExtendedError("problem list is empty")
+	_, err := GetMapWithIdKey([]Problem{})
+	if !errors.Is(checkError, err) {
+		t.Error("Unknown error!")
 	}
 }
 

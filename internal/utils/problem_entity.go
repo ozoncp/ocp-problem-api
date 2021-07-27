@@ -1,9 +1,26 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
 )
+
+type extendedStringError struct {
+	s string
+}
+
+func (e *extendedStringError) Error() string {
+	return e.s
+}
+
+func (e *extendedStringError) Is(target error) bool {
+	return e.Error() == target.Error()
+}
+
+func NewExtendedError(message string) error{
+	return &extendedStringError{
+		s: message,
+	}
+}
 
 type Problem struct {
 	Id uint64
@@ -76,11 +93,11 @@ func SplitToBulks(problems []Problem, butchSize uint) [][]Problem  {
 
 func GetMapWithIdKey(problems []Problem) (map[uint64]Problem, error) {
 	if problems == nil {
-		return nil, errors.New("problem list is not init")
+		return nil, NewExtendedError("problem list is not init")
 	}
 
 	if len(problems) == 0 {
-		return nil, errors.New("problem list is empty")
+		return nil, NewExtendedError("problem list is empty")
 	}
 
 	outList := make(map[uint64]Problem, len(problems))
