@@ -15,10 +15,34 @@ var _ = Describe("Flusher", func() {
 	var (
 		ctrl *gomock.Controller
 		mockRepo *mocks.MockRepo
+		result []utils.Problem
 	)
 
 	Context("Flush", func() {
-		It("", func() {
+		BeforeEach(func() {
+			ctrl = gomock.NewController(GinkgoT())
+			mockRepo = mocks.NewMockRepo(ctrl)
+		})
+
+		AfterEach(func() {
+			ctrl.Finish()
+		})
+
+		It("Check nil problem list", func() {
+			problemFlusher := flusher.NewFlusher(2, mockRepo)
+			result = problemFlusher.Flush(nil)
+
+			Expect(result).To(BeNil())
+		})
+
+		It("Check empty problem list", func() {
+			problemFlusher := flusher.NewFlusher(2, mockRepo)
+			result = problemFlusher.Flush([]utils.Problem{})
+
+			Expect(result).To(BeNil())
+		})
+
+		It("Check bulk save entities", func() {
 			solution := []utils.Problem{
 				{},
 				{},
@@ -29,18 +53,13 @@ var _ = Describe("Flusher", func() {
 				{},
 			}
 
-			ctrl = gomock.NewController(GinkgoT())
-			mockRepo = mocks.NewMockRepo(ctrl)
-
-			defer ctrl.Finish()
-
 			problemFlusher := flusher.NewFlusher(2, mockRepo)
 
 			mockRepo.EXPECT().AddEntities([]utils.Problem{{},{}}).Times(2).Return(nil)
 			mockRepo.EXPECT().AddEntities([]utils.Problem{{},{}}).Times(3).Return(errors.New("some error"))
 			mockRepo.EXPECT().AddEntities([]utils.Problem{{}}).Return(errors.New("some error"))
 
-			result := problemFlusher.Flush([]utils.Problem{
+			result = problemFlusher.Flush([]utils.Problem{
 				{},
 				{},
 				{},

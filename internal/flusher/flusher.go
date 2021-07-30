@@ -20,6 +20,10 @@ func (f flusher) Flush(problems []utils.Problem) []utils.Problem {
 	}
 
 	problemsSize := len(problems)
+	if problemsSize == 0 {
+		return nil
+	}
+
 	if problemsSize < f.chunkSize {
 		if err := f.problemRepo.AddEntities(problems); err != nil {
 			return problems
