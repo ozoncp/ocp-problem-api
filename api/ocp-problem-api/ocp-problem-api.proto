@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/ozoncp/ocp-problem-api/pkg/ocp-problem-api;ocp_problem_api";
+
+package ocp.problem.api;
+
+message ProblemV1 {
+  uint64 id = 1;
+  uint64 user_id = 2;
+  string text = 3;
+}
+
+message ResultSaveV1 {
+  uint64 id = 1;
+}
+
+message ProblemQueryV1 {
+  uint64 id = 1;
+}
+
+message ProblemFilterV1 {
+  repeated uint64 ids = 1;
+  repeated uint64 user_ids = 2;
+}
+
+message ProblemListQueryV1 {
+  ProblemFilterV1 filter = 1;
+  uint64 limit = 2;
+  uint64 offset = 3;
+}
+
+message ProblemListV1 {
+  repeated ProblemV1 list = 1;
+}
+
+message ProblemResultV1 {
+  bool is_success = 1;
+  uint64 id = 2;
+  string text = 3;
+}
+
+service OcpProblem {
+  rpc CreateProblemV1(ProblemV1) returns (ResultSaveV1) {
+    option (google.api.http) = {
+      post: "/v1/create"
+      body: "*"
+    };
+  }
+
+  rpc DescribeProblemV1(ProblemQueryV1) returns (ProblemV1) {
+    option (google.api.http) = {
+      get: "/v1/show/{id}"
+    };
+  }
+
+  rpc ListProblemsV1(ProblemListQueryV1) returns (ProblemListV1) {
+    option (google.api.http) = {
+      get: "/v1/list"
+    };
+  }
+
+  rpc RemoveProblemV1(ProblemQueryV1) returns (ProblemResultV1) {
+    option (google.api.http) = {
+      delete: "/v1/remove/{id}"
+    };
+  }
+}
