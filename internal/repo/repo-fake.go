@@ -1,23 +1,19 @@
 package repo
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/ozoncp/ocp-problem-api/internal/utils"
 	"sync"
 )
 
-type RepoRemover interface {
-	Repo
-	RemoveEntity(entityId uint64) error
-}
-
 type fakeRepoProblem struct {
 	*sync.Mutex
 	store []utils.Problem
 }
 
-func (frp *fakeRepoProblem) AddEntities(problems []utils.Problem) error {
+func (frp *fakeRepoProblem) AddEntities(_ context.Context, problems []utils.Problem) error {
 	var err error
 	frp.Lock()
 	defer frp.Unlock()
@@ -33,7 +29,7 @@ func (frp *fakeRepoProblem) AddEntities(problems []utils.Problem) error {
 	return err
 }
 
-func (frp *fakeRepoProblem) ListEntities(limit, offset uint64) ([]utils.Problem, error) {
+func (frp *fakeRepoProblem) ListEntities(_ context.Context, limit, offset uint64) ([]utils.Problem, error) {
 	frp.Lock()
 	defer frp.Unlock()
 
@@ -64,14 +60,14 @@ func (frp *fakeRepoProblem) describeEntity(entityId uint64) (*utils.Problem, err
 	return nil, errors.New("problem not found")
 }
 
-func (frp *fakeRepoProblem) DescribeEntity(entityId uint64) (*utils.Problem, error) {
+func (frp *fakeRepoProblem) DescribeEntity(_ context.Context, entityId uint64) (*utils.Problem, error) {
 	frp.Lock()
 	defer frp.Unlock()
 
 	return frp.describeEntity(entityId)
 }
 
-func (frp *fakeRepoProblem) RemoveEntity(entityId uint64) error {
+func (frp *fakeRepoProblem) RemoveEntity(_ context.Context, entityId uint64) error {
 	frp.Lock()
 	frp.Unlock()
 	for i, problem := range frp.store {
@@ -82,7 +78,7 @@ func (frp *fakeRepoProblem) RemoveEntity(entityId uint64) error {
 			), append(
 				make([]utils.Problem, 0, len(frp.store[i+1:])),
 				frp.store[i+1:]...
-				)...)
+			)...)
 
 			return nil
 		}
@@ -91,6 +87,6 @@ func (frp *fakeRepoProblem) RemoveEntity(entityId uint64) error {
 	return errors.New("problem not found")
 }
 
-func NewRepo() RepoRemover {
+func NewFakeRepo() RepoRemover {
 	return &fakeRepoProblem{Mutex: &sync.Mutex{}, store: []utils.Problem{}}
 }

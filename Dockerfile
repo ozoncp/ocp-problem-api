@@ -1,5 +1,7 @@
 FROM ubuntu AS builder
 
+ARG DATABASE_URL
+
 RUN apt update -y && \
     apt upgrade -y && \
     apt install -y locales && \
@@ -12,25 +14,22 @@ RUN apt update -y && \
     echo 'developer:developer' | chpasswd
 USER developer
 
-RUN echo developer | sudo -S DEBIAN_FRONTEND="noninteractive" apt install -y golang && \
-    echo developer | sudo -S apt install -y ca-certificates && sudo update-ca-certificates && \
-    echo developer | sudo -S apt install -y make git vim protobuf-compiler
+RUN echo developer | sudo -S apt install -y ca-certificates && sudo update-ca-certificates && \
+    echo developer | sudo -S apt install -y make git vim protobuf-compiler wget iputils-ping build-essential && \
+    echo developer | sudo wget https://golang.org/dl/go1.17.linux-amd64.tar.gz && \
+    echo developer | sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.17.linux-amd64.tar.gz && \
+    echo developer | sudo rm go1.17.linux-amd64.tar.gz
 
 ENV GOPATH /home/developer/go
-ENV PATH $PATH:/home/developer/go/bin
+ENV PATH $PATH:/home/developer/go/bin:/usr/local/go/bin
+ENV DATABASE_URL $DATABASE_URL
 
 COPY . /home/developer/go/src/github.com/ozoncp/ocp-problem-api
-RUN echo developer | sudo -S chown -R developer /home/developer/
+COPY ./run.sh .
+RUN echo developer | sudo -S chown -R developer /home/developer/ ./run.sh && chmod +x run.sh
 
 WORKDIR /home/developer/go/src/github.com/ozoncp/ocp-problem-api
 
 RUN make deps && make build
 
-FROM alpine:latest
-RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /home/developer/go/src/github.com/ozoncp/ocp-problem-api/bin/ocp-problem-api .
-RUN chown root:root ocp-problem-api
-EXPOSE 8082
-EXPOSE 8083
-CMD ["./ocp-problem-api", "-host", ""]
+CMD ["./run.sh"]

@@ -5,12 +5,12 @@ import (
 	desc "github.com/ozoncp/ocp-problem-api/pkg/ocp-problem-api"
 )
 
-func (pa *OcpProblemAPI) ListProblemsV1(_ context.Context, listQuery *desc.ProblemListQueryV1) (*desc.ProblemListV1, error) {
+func (pa *OcpProblemAPI) ListProblemsV1(ctx context.Context, listQuery *desc.ProblemListQueryV1) (*desc.ProblemListV1, error) {
 	result := &desc.ProblemListV1{
 		List: []*desc.ProblemV1{},
 	}
 
-	list, err := pa.repo.ListEntities(0, 0)
+	list, err := pa.repo.ListEntities(ctx, listQuery.Limit, listQuery.Offset)
 	if err != nil {
 		pa.logError("ListProblemsV1", listQuery, err)
 		return nil, err
@@ -56,10 +56,6 @@ func (pa *OcpProblemAPI) ListProblemsV1(_ context.Context, listQuery *desc.Probl
 	}
 
 	pa.logResult("ListProblemsV1", listQuery, result)
-	//
-	//if listQuery.Limit > 0 {
-	//	result.List = result.List[listQuery.Offset:(listQuery.Offset+listQuery.Limit)]
-	//}
 
 	return result, nil
 }

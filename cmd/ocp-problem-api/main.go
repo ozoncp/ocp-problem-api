@@ -2,7 +2,11 @@ package main
 
 import (
 	"flag"
-	ocp_problem_api "github.com/ozoncp/ocp-problem-api/internal/app/ocp-problem-api"
+	"fmt"
+	ocp "github.com/ozoncp/ocp-problem-api/internal/app/ocp-problem-api"
+	"github.com/ozoncp/ocp-problem-api/internal/repo"
+	"github.com/rs/zerolog"
+	"os"
 )
 
 var (
@@ -16,8 +20,23 @@ func main()  {
 	grpcPort := uint32(*serverGrpcPort)
 	restPort := uint32(*serverRestPort)
 
-	serviceRunner := ocp_problem_api.NewRunner(grpcPort, restPort, *serverHost, ocp_problem_api.NewOcpProblemAPI())
-	if err := serviceRunner.Run(); err != nil {
+	serviceRepo, err := repo.NewPgRepo(os.Getenv("DATABASE_URL"))
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
 
+	//serviceRepo := repo.NewFakeRepo()
+	logger := zerolog.New(os.Stdout)
+	service := ocp.NewOcpProblemAPI(serviceRepo, logger)
+	serviceRunner := ocp.NewRunner(
+		grpcPort,
+		restPort,
+		*serverHost,
+		service,
+		logger,
+		)
+	if err := serviceRunner.Run(); err != nil {
+		fmt.Println(err.Error())
 	}
 }

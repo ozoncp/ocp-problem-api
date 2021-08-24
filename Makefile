@@ -21,6 +21,7 @@ build: vendor-proto .generate .build
 .PHONY: .build
 .build:
 		CGO_ENABLED=0 GOOS=linux go build -o bin/ocp-problem-api cmd/ocp-problem-api/main.go
+		CGO_ENABLED=0 GOOS=linux go build -o bin/goose cmd/goose/main.go
 
 .PHONY: install
 install: build .install
@@ -48,7 +49,6 @@ vendor-proto: .vendor-proto
 			git clone https://github.com/envoyproxy/protoc-gen-validate vendor.protogen/github.com/envoyproxy/protoc-gen-validate ;\
 		fi
 
-
 .PHONY: deps
 deps: install-go-deps
 
@@ -63,13 +63,18 @@ install-go-deps: .install-go-deps
 		go get -u github.com/golang/protobuf/protoc-gen-go
 		go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
 		go get -u github.com/envoyproxy/protoc-gen-validate
+		go get -u github.com/pressly/goose/v3/cmd/goose
 		go install github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
+		go get github.com/jackc/pgx/v4/pgxpool
 		go install google.golang.org/grpc/cmd/protoc-gen-go-grpc
 		go install github.com/envoyproxy/protoc-gen-validate
 		go mod tidy
 
 .PHONY: docker-start
 docker-start:
-		docker ps | grep ocp_problem_api && docker stop ocp_problem_api || echo 'clean'
-		docker build -t alex19pov31/ocp-problem-api .
-		docker run -ti --rm --name=ocp_problem_api -p 8082:8082 -p 8083:8083 alex19pov31/ocp-problem-api
+		@if [ ! -f .env ]; then \
+  			cp .env.example .env &&\
+  			sed -i 's/password/'`tr -dc A-Za-z0-9 </dev/urandom | head -c 15 ; echo ''`'/g' .env ;\
+        fi
+		docker-compose stop && echo 'y' | docker-compose rm || echo "already stopped"
+		docker-compose up --build

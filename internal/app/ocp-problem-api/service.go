@@ -5,7 +5,6 @@ import (
 	"github.com/ozoncp/ocp-problem-api/internal/repo"
 	desc "github.com/ozoncp/ocp-problem-api/pkg/ocp-problem-api"
 	"github.com/rs/zerolog"
-	"os"
 )
 
 type OcpProblemAPI struct {
@@ -28,9 +27,9 @@ func (pa *OcpProblemAPI) logError(method string, request interface{}, err error)
 		Msg(err.Error())
 }
 
-func NewOcpProblemAPI() desc.OcpProblemServer {
+func NewOcpProblemAPI(r repo.RepoRemover, logger zerolog.Logger) desc.OcpProblemServer {
 	return &OcpProblemAPI{
-		repo: repo.NewRepo(),
-		log: zerolog.New(os.Stdout),
+		repo: r,
+		log: logger,
 	}
 }

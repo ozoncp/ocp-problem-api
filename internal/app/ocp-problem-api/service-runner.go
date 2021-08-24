@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/ozoncp/ocp-problem-api/internal/utils"
 	desc "github.com/ozoncp/ocp-problem-api/pkg/ocp-problem-api"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 	"net"
@@ -105,18 +107,23 @@ type projectRunner struct {
 	host string
 	isRunning bool
 	service interface{}
+	log zerolog.Logger
 }
 
 func (pr *projectRunner) Stop() error {
+	var stopError error
+
 	if err := pr.rest.stop(); err != nil {
-		return err
+		stopError = utils.NewWrappedError(err.Error(), stopError)
+		pr.log.Error().Msg(err.Error())
 	}
 
 	if err := pr.grpc.stop(); err != nil {
-		return err
+		stopError = utils.NewWrappedError(err.Error(), stopError)
+		pr.log.Error().Msg(err.Error())
 	}
 
-	return nil
+	return stopError
 }
 
 func (pr *projectRunner) SetRestRunner(runner RestRunner) error {
@@ -144,7 +151,6 @@ func (pr *projectRunner) Run() error {
 	pr.isRunning = false
 	go func(errChan chan <-error) {
 		if err := pr.grpc.runGrpc(pr.grpcPort, pr.host, pr.service); err != nil {
-			log.Err(err)
 			errChan <-err
 		}
 	}(errChan)
@@ -152,17 +158,23 @@ func (pr *projectRunner) Run() error {
 
 	go func(errChan chan <-error) {
 		if err := pr.rest.runRest(pr.restPort, pr.grpcPort, pr.host); err != nil {
-			pr.grpc.stop()
+			if err := pr.grpc.stop(); err != nil {
+				pr.log.Error().Msg(err.Error())
+			}
+
 			errChan <-err
 		}
 	}(errChan)
 
 	pr.isRunning = true
 
-	return <-errChan
+	err := <- errChan
+	pr.log.Error().Msg(err.Error())
+
+	return err
 }
 
-func NewRunner(grpcPort uint32, restPort uint32, host string, service interface{}) PublicRunner {
+func NewRunner(grpcPort uint32, restPort uint32, host string, service interface{}, logger zerolog.Logger) PublicRunner {
 	return &projectRunner{
 		rest: &defaultRestRunner{},
 		grpc: &defaultGrpcRunner{},
@@ -170,5 +182,6 @@ func NewRunner(grpcPort uint32, restPort uint32, host string, service interface{
 		restPort: restPort,
 		host: host,
 		service: service,
+		log: logger,
 	}
 }

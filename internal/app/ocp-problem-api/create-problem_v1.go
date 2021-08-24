@@ -6,8 +6,8 @@ import (
 	desc "github.com/ozoncp/ocp-problem-api/pkg/ocp-problem-api"
 )
 
-func (pa *OcpProblemAPI)  CreateProblemV1(_ context.Context, problem *desc.ProblemV1) (*desc.ResultSaveV1, error) {
-	err := pa.repo.AddEntities([]utils.Problem{
+func (pa *OcpProblemAPI) CreateProblemV1(ctx context.Context, problem *desc.ProblemV1) (*desc.ResultSaveV1, error) {
+	err := pa.repo.AddEntities(ctx, []utils.Problem{
 		{
 			Id:     problem.Id,
 			UserId: problem.UserId,

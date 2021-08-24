@@ -1,12 +1,13 @@
 package flusher
 
 import (
+	"context"
 	"github.com/ozoncp/ocp-problem-api/internal/repo"
 	"github.com/ozoncp/ocp-problem-api/internal/utils"
 )
 
 type Flusher interface {
-	Flush(problems []utils.Problem) []utils.Problem
+	Flush(ctx context.Context, problems []utils.Problem) []utils.Problem
 }
 
 type flusher struct {
@@ -14,7 +15,7 @@ type flusher struct {
 	problemRepo repo.Repo
 }
 
-func (f flusher) Flush(problems []utils.Problem) []utils.Problem {
+func (f flusher) Flush(ctx context.Context, problems []utils.Problem) []utils.Problem {
 	if problems == nil {
 		return nil
 	}
@@ -25,7 +26,7 @@ func (f flusher) Flush(problems []utils.Problem) []utils.Problem {
 	}
 
 	if problemsSize < f.chunkSize {
-		if err := f.problemRepo.AddEntities(problems); err != nil {
+		if err := f.problemRepo.AddEntities(ctx, problems); err != nil {
 			return problems
 		}
 
@@ -39,7 +40,7 @@ func (f flusher) Flush(problems []utils.Problem) []utils.Problem {
 			endIndex = problemsSize
 		}
 
-		if err := f.problemRepo.AddEntities(problems[startIndex:endIndex]); err != nil {
+		if err := f.problemRepo.AddEntities(ctx, problems[startIndex:endIndex]); err != nil {
 			returnList = append(returnList, problems[startIndex:endIndex]...)
 		}
 	}
