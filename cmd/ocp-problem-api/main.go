@@ -8,6 +8,8 @@ import (
 	"github.com/rs/zerolog"
 	"io"
 	"os"
+	"os/signal"
+	"syscall"
 
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/uber/jaeger-lib/metrics"
@@ -54,6 +56,7 @@ func main()  {
 
 	defer serviceRunner.Stop()
 
+	startSignalCatcher(serviceRunner, tracerCloser)
 	if err := serviceRunner.Run(); err != nil {
 		fmt.Println(err.Error())
 	}
@@ -85,4 +88,15 @@ func initTracer() (closer io.Closer, err error) {
 
 	opentracing.SetGlobalTracer(tracer)
 	return
+}
+
+func startSignalCatcher(runner ocp.PublicRunner, tracerCloser io.Closer) {
+	go func() {
+		defer runner.Stop()
+		defer tracerCloser.Close()
+
+		done := make(chan os.Signal, 1)
+		signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+		<-done
+	}()
 }
