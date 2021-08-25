@@ -28,9 +28,7 @@ func (f *flusher) Flush(ctx context.Context, problems []utils.Problem) []utils.P
 func (f *flusher) FlushWithError(ctx context.Context, problems []utils.Problem) ([]utils.Problem, error) {
 	var methodErr error
 
-	tracer := opentracing.GlobalTracer()
 	parentSpan := opentracing.SpanFromContext(ctx)
-
 	if problems == nil {
 		methodErr = errors.New("problem list is empty")
 		return nil, methodErr
@@ -38,7 +36,10 @@ func (f *flusher) FlushWithError(ctx context.Context, problems []utils.Problem) 
 
 	problemsSize := len(problems)
 	if problemsSize == 0 {
-		span := tracer.StartSpan("FlushWithError", opentracing.ChildOf(parentSpan.Context()))
+		span, _ := opentracing.StartSpanFromContext(
+			ctx,
+			"FlushWithError",
+			opentracing.ChildOf(parentSpan.Context()))
 		defer span.Finish()
 
 		span.SetBaggageItem("save-count", strconv.Itoa(problemsSize))
@@ -49,7 +50,11 @@ func (f *flusher) FlushWithError(ctx context.Context, problems []utils.Problem) 
 	}
 
 	if problemsSize < f.chunkSize {
-		span := tracer.StartSpan("FlushWithError", opentracing.ChildOf(parentSpan.Context()))
+		span, _ := opentracing.StartSpanFromContext(
+			ctx,
+			"FlushWithError",
+			opentracing.ChildOf(parentSpan.Context()))
+
 		defer span.Finish()
 
 		span.SetBaggageItem("save-count", strconv.Itoa(problemsSize))
@@ -65,7 +70,10 @@ func (f *flusher) FlushWithError(ctx context.Context, problems []utils.Problem) 
 
 	returnList := make([]utils.Problem, 0, problemsSize)
 	for startIndex, endIndex := 0, 0; startIndex < problemsSize; startIndex += f.chunkSize {
-		span := tracer.StartSpan("FlushWithError", opentracing.ChildOf(parentSpan.Context()))
+		span, _ := opentracing.StartSpanFromContext(
+			ctx,
+			"FlushWithError",
+			opentracing.ChildOf(parentSpan.Context()))
 
 		endIndex = startIndex + f.chunkSize
 		if endIndex > problemsSize {

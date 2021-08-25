@@ -15,8 +15,7 @@ func (pa *OcpProblemAPI) MultiCreateProblemV1(
 	problemList *desc.ProblemListV1,
 	) (*desc.ListResultSaveV1, error) {
 
-	tracer := opentracing.GlobalTracer()
-	span := tracer.StartSpan("MultiCreateProblemV1")
+	span, ctx := opentracing.StartSpanFromContext(ctx, "MultiCreateProblemV1")
 	defer span.Finish()
 
 	span.SetBaggageItem("total_count", strconv.Itoa(len(problemList.List)))
@@ -33,7 +32,6 @@ func (pa *OcpProblemAPI) MultiCreateProblemV1(
 		})
 	}
 
-	ctx = opentracing.ContextWithSpan(ctx, span)
 	_, err := pa.flusher.FlushWithError(ctx, problems)
 	if err != nil {
 		pa.logError("CreateProblemV1", problemList, err)

@@ -35,8 +35,8 @@ func main()  {
 	serviceRepo := repo.NewRepoChain(dbRepo, kafkaRepo)
 
 	logger := zerolog.New(os.Stdout)
-	closer, err := initTracer()
-	defer closer.Close()
+	tracerCloser, err := initTracer()
+	defer tracerCloser.Close()
 
 	if err != nil {
 		logger.Error().Msg(err.Error())
@@ -51,6 +51,9 @@ func main()  {
 		service,
 		logger,
 		)
+
+	defer serviceRunner.Stop()
+
 	if err := serviceRunner.Run(); err != nil {
 		fmt.Println(err.Error())
 	}

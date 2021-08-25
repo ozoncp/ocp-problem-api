@@ -223,16 +223,22 @@ func (rp *repoPg) ListEntities(ctx context.Context, limit, offset uint64) ([]uti
 		return nil, errMethod
 	}
 
-	switch {
-	case limit == 0 && offset == 0:
-		rows, errMethod = conn.Query(ctx, "select id, user_id, message from problem;")
-	case limit > 0 && offset == 0:
-		rows, errMethod = conn.Query(ctx, "select id, user_id, message from problem limit $1;", limit)
-	case limit == 0 && offset > 0:
-		rows, errMethod = conn.Query(ctx, "select id, user_id, message from problem offset $1;", offset)
-	default:
-		rows, errMethod = conn.Query(ctx, "select id, user_id, message from problem limit $1 offset $2;", limit, offset)
+	baseQuery := &strings.Builder{}
+	baseQuery.WriteString("select id, user_id, message from problem")
+	if limit > 0 {
+		baseQuery.WriteString(" limit $1")
 	}
+
+	if offset > 0 && limit == 0 {
+		baseQuery.WriteString(" offset $1")
+	}
+
+	if offset > 0 && limit > 0 {
+		baseQuery.WriteString(" offset $2")
+	}
+
+	baseQuery.WriteByte(';')
+	rows, errMethod = conn.Query(ctx, baseQuery.String(), limit, offset)
 
 	if errMethod != nil {
 		return nil, errMethod

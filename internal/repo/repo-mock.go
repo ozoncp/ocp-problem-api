@@ -10,7 +10,7 @@ import (
 
 type fakeRepoProblem struct {
 	RepoRemover
-	*sync.Mutex
+	*sync.RWMutex
 	store []utils.Problem
 }
 
@@ -42,8 +42,8 @@ func (frp *fakeRepoProblem) UpdateEntity(_ context.Context, problem utils.Proble
 }
 
 func (frp *fakeRepoProblem) ListEntities(_ context.Context, limit, offset uint64) ([]utils.Problem, error) {
-	frp.Lock()
-	defer frp.Unlock()
+	frp.RLock()
+	defer frp.RUnlock()
 
 	if limit == 0 && offset == 0 {
 		return frp.store, nil
@@ -73,8 +73,8 @@ func (frp *fakeRepoProblem) describeEntity(entityId uint64) (*utils.Problem, err
 }
 
 func (frp *fakeRepoProblem) DescribeEntity(_ context.Context, entityId uint64) (*utils.Problem, error) {
-	frp.Lock()
-	defer frp.Unlock()
+	frp.RLock()
+	defer frp.RUnlock()
 
 	return frp.describeEntity(entityId)
 }
@@ -100,5 +100,5 @@ func (frp *fakeRepoProblem) RemoveEntity(_ context.Context, entityId uint64) err
 }
 
 func NewFakeRepo() RepoRemover {
-	return &fakeRepoProblem{Mutex: &sync.Mutex{}, store: []utils.Problem{}}
+	return &fakeRepoProblem{RWMutex: &sync.RWMutex{}, store: []utils.Problem{}}
 }

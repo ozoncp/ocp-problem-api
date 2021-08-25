@@ -88,9 +88,10 @@ func (pgr *defaultGrpcRunner) stop() error {
 type defaultRestRunner struct {
 	log zerolog.Logger
 	cancelFunc context.CancelFunc
+	server *http.Server
 }
 
-func (prr *defaultRestRunner) runRest(port, grpcPort uint32, host string) error {
+func (prr *defaultRestRunner) runRest(port, grpcPort uint32, host string) (err error) {
 	ctx := context.Background()
 	ctx, prr.cancelFunc = context.WithCancel(ctx)
 	defer prr.cancelFunc()
@@ -98,35 +99,58 @@ func (prr *defaultRestRunner) runRest(port, grpcPort uint32, host string) error 
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
 
-	err := desc.RegisterOcpProblemHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%v:%d", host, grpcPort), opts)
+	err = desc.RegisterOcpProblemHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%v:%d", host, grpcPort), opts)
 	if err != nil {
 		prr.log.Fatal().Msg(err.Error())
-		return err
+		return
 	}
 
 	prr.log.Info().Msgf("Listening REST on %v:%d", host, port)
 
-	return http.ListenAndServe(fmt.Sprintf("%v:%d", host, port), mux)
+	prr.server = &http.Server{
+		Addr: fmt.Sprintf("%v:%d", host, port),
+		Handler: mux,
+	}
+	defer func() {
+		err = prr.server.Close()
+	}()
+
+	return prr.server.ListenAndServe()
 }
 
 func (prr *defaultRestRunner) stop() error {
 	prr.cancelFunc()
-	return nil
+	return prr.server.Close()
 }
 
 type defaultMetricRunner struct {
 	log zerolog.Logger
+	server *http.Server
 }
 
-func (mr *defaultMetricRunner) runMetric(port uint32, host string) error {
+func (mr *defaultMetricRunner) runMetric(port uint32, host string) (err error) {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	mr.log.Info().Msgf("Public metric on %v:%d", host, port)
 
-	return http.ListenAndServe(fmt.Sprintf("%v:%d", host, port), mux)
+	mr.server = &http.Server{
+		Addr: fmt.Sprintf("%v:%d", host, port),
+		Handler: mux,
+	}
+
+	defer func() {
+		err = mr.server.Close()
+	}()
+
+	err = mr.server.ListenAndServe()
+	return
 }
 
 func (mr *defaultMetricRunner) stop() error {
+	if mr.server != nil {
+		return mr.server.Close()
+	}
+
 	return nil
 }
 
@@ -152,6 +176,11 @@ func (pr *projectRunner) Stop() error {
 	}
 
 	if err := pr.grpc.stop(); err != nil {
+		stopError = utils.NewWrappedError(err.Error(), stopError)
+		pr.log.Error().Msg(err.Error())
+	}
+
+	if err := pr.metric.stop(); err != nil {
 		stopError = utils.NewWrappedError(err.Error(), stopError)
 		pr.log.Error().Msg(err.Error())
 	}
@@ -215,7 +244,14 @@ func (pr *projectRunner) Run() error {
 	return err
 }
 
-func NewRunner(grpcPort, restPort, metricPort uint32, host string, service interface{}, logger zerolog.Logger) PublicRunner {
+func NewRunner(
+	grpcPort,
+	restPort,
+	metricPort uint32,
+	host string,
+	service desc.OcpProblemServer,
+	logger zerolog.Logger,
+	) PublicRunner {
 	return &projectRunner{
 		rest: &defaultRestRunner{log: logger},
 		grpc: &defaultGrpcRunner{log: logger},
