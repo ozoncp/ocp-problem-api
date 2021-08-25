@@ -1,6 +1,7 @@
 package flusher_test
 
 import (
+	"context"
 	"errors"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -16,7 +17,10 @@ var _ = Describe("Flusher", func() {
 		ctrl *gomock.Controller
 		mockRepo *mocks.MockRepo
 		result []utils.Problem
+		ctx context.Context
 	)
+
+	ctx = context.Background()
 
 	Context("Flush", func() {
 		BeforeEach(func() {
@@ -30,14 +34,14 @@ var _ = Describe("Flusher", func() {
 
 		It("Check nil problem list", func() {
 			problemFlusher := flusher.NewFlusher(2, mockRepo)
-			result = problemFlusher.Flush(nil)
+			result = problemFlusher.Flush(ctx,nil)
 
 			Expect(result).To(BeNil())
 		})
 
 		It("Check empty problem list", func() {
 			problemFlusher := flusher.NewFlusher(2, mockRepo)
-			result = problemFlusher.Flush([]utils.Problem{})
+			result = problemFlusher.Flush(ctx, []utils.Problem{})
 
 			Expect(result).To(BeNil())
 		})
@@ -54,12 +58,11 @@ var _ = Describe("Flusher", func() {
 			}
 
 			problemFlusher := flusher.NewFlusher(2, mockRepo)
+			mockRepo.EXPECT().AddEntities(ctx, []utils.Problem{{},{}}).Times(2).Return(nil)
+			mockRepo.EXPECT().AddEntities(ctx, []utils.Problem{{},{}}).Times(3).Return(errors.New("some error"))
+			mockRepo.EXPECT().AddEntities(ctx, []utils.Problem{{}}).Return(errors.New("some error"))
 
-			mockRepo.EXPECT().AddEntities([]utils.Problem{{},{}}).Times(2).Return(nil)
-			mockRepo.EXPECT().AddEntities([]utils.Problem{{},{}}).Times(3).Return(errors.New("some error"))
-			mockRepo.EXPECT().AddEntities([]utils.Problem{{}}).Return(errors.New("some error"))
-
-			result = problemFlusher.Flush([]utils.Problem{
+			result = problemFlusher.Flush(ctx, []utils.Problem{
 				{},
 				{},
 				{},

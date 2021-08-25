@@ -1,0 +1,106 @@
+version: "3"
+services:
+  db:
+    image: postgres:alpine
+    restart: always
+    volumes:
+      - ocp-db-data:/var/lib/postgresql/data:rw
+      - ocp-pid:/var/run:rw
+    ports:
+      - "5432:5432"
+    env_file: .env
+    read_only: true
+  adminer:
+    image: adminer
+    restart: always
+    volumes:
+      - ocp-pid:/var/run:rw
+      - ocp-tmp:/tmp:rw
+      - ocp-home:/var/www/html:rw
+    env_file: .env
+    depends_on:
+      - db
+    links:
+      - db:db
+    ports:
+      - "8080:8080"
+    read_only: true
+  app:
+    container_name: 'problem_api'
+    build:
+        context: .
+        dockerfile: Dockerfile
+        args:
+          DATABASE_URL: '${DATABASE_URL}'
+    depends_on:
+      - db
+      - kafka
+    links:
+      - db:db
+      - kafka:kafka
+      - jaeger:jaeger
+    volumes:
+      - ocp-pid:/var/run:rw
+      - ocp-tmp:/tmp:rw
+    env_file: .env
+    ports:
+      - "8082:8082"
+      - "8083:8083"
+      - "9100:9100"
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      zk_id: "1"
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+  kafka-ui:
+    image: obsidiandynamics/kafdrop:latest
+    depends_on:
+      - kafka
+    links:
+      - kafka:kafka
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: "kafka:9092"
+      JVM_OPTS: "-Xms32M -Xmx64M"
+      SERVER_SERVLET_CONTEXTPATH: "/"
+  kafka:
+    image: confluentinc/cp-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "127.0.0.1:9094:9094"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:32181"
+      KAFKA_LISTENERS: INTERNAL://kafka:9092,OUTSIDE://kafka:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,OUTSIDE://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  prometheus:
+    image: prom/prometheus
+    links:
+      - app:app
+    ports:
+      - "9090:9090"
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "5775:5775/udp"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+      - "5778:5778"
+      - "16686:16686"
+      - "14268:14268"
+      - "9411:9411"
+volumes:
+  ocp-home:
+  ocp-db-data:
+  ocp-tmp:
+  ocp-pid:
