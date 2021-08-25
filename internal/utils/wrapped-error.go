@@ -1,12 +1,27 @@
 package utils
 
+import (
+	"errors"
+	"strings"
+)
+
 type wrappedError struct {
 	err error
 	message string
 }
 
 func (werr *wrappedError) Error() string {
-	return werr.message
+	builder := &strings.Builder{}
+	builder.WriteString(werr.message)
+
+	currentError := werr.err
+	for ; currentError != nil; {
+		builder.WriteString(", ")
+		builder.WriteString(currentError.Error())
+		currentError = errors.Unwrap(currentError)
+	}
+
+	return builder.String()
 }
 
 func (werr *wrappedError) Unwrap() error {

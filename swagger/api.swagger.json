@@ -103,6 +103,38 @@
         ]
       }
     },
+    "/v1/multi-create": {
+      "post": {
+        "operationId": "OcpProblem_MultiCreateProblemV1",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiListResultSaveV1"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/apiProblemListV1"
+            }
+          }
+        ],
+        "tags": [
+          "OcpProblem"
+        ]
+      }
+    },
     "/v1/remove/{id}": {
       "delete": {
         "operationId": "OcpProblem_RemoveProblemV1",
@@ -164,9 +196,59 @@
           "OcpProblem"
         ]
       }
+    },
+    "/v1/update/{id}": {
+      "put": {
+        "operationId": "OcpProblem_UpdateProblemV1",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiResultSaveV1"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/apiProblemV1"
+            }
+          }
+        ],
+        "tags": [
+          "OcpProblem"
+        ]
+      }
     }
   },
   "definitions": {
+    "apiListResultSaveV1": {
+      "type": "object",
+      "properties": {
+        "list": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/apiResultSaveV1"
+          }
+        }
+      }
+    },
     "apiProblemFilterV1": {
       "type": "object",
       "properties": {

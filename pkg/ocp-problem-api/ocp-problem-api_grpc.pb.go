@@ -18,7 +18,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type OcpProblemClient interface {
+	MultiCreateProblemV1(ctx context.Context, in *ProblemListV1, opts ...grpc.CallOption) (*ListResultSaveV1, error)
 	CreateProblemV1(ctx context.Context, in *ProblemV1, opts ...grpc.CallOption) (*ResultSaveV1, error)
+	UpdateProblemV1(ctx context.Context, in *ProblemV1, opts ...grpc.CallOption) (*ResultSaveV1, error)
 	DescribeProblemV1(ctx context.Context, in *ProblemQueryV1, opts ...grpc.CallOption) (*ProblemV1, error)
 	ListProblemsV1(ctx context.Context, in *ProblemListQueryV1, opts ...grpc.CallOption) (*ProblemListV1, error)
 	RemoveProblemV1(ctx context.Context, in *ProblemQueryV1, opts ...grpc.CallOption) (*ProblemResultV1, error)
@@ -32,9 +34,27 @@ func NewOcpProblemClient(cc grpc.ClientConnInterface) OcpProblemClient {
 	return &ocpProblemClient{cc}
 }
 
+func (c *ocpProblemClient) MultiCreateProblemV1(ctx context.Context, in *ProblemListV1, opts ...grpc.CallOption) (*ListResultSaveV1, error) {
+	out := new(ListResultSaveV1)
+	err := c.cc.Invoke(ctx, "/ocp.problem.api.OcpProblem/MultiCreateProblemV1", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *ocpProblemClient) CreateProblemV1(ctx context.Context, in *ProblemV1, opts ...grpc.CallOption) (*ResultSaveV1, error) {
 	out := new(ResultSaveV1)
 	err := c.cc.Invoke(ctx, "/ocp.problem.api.OcpProblem/CreateProblemV1", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ocpProblemClient) UpdateProblemV1(ctx context.Context, in *ProblemV1, opts ...grpc.CallOption) (*ResultSaveV1, error) {
+	out := new(ResultSaveV1)
+	err := c.cc.Invoke(ctx, "/ocp.problem.api.OcpProblem/UpdateProblemV1", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +92,9 @@ func (c *ocpProblemClient) RemoveProblemV1(ctx context.Context, in *ProblemQuery
 // All implementations must embed UnimplementedOcpProblemServer
 // for forward compatibility
 type OcpProblemServer interface {
+	MultiCreateProblemV1(context.Context, *ProblemListV1) (*ListResultSaveV1, error)
 	CreateProblemV1(context.Context, *ProblemV1) (*ResultSaveV1, error)
+	UpdateProblemV1(context.Context, *ProblemV1) (*ResultSaveV1, error)
 	DescribeProblemV1(context.Context, *ProblemQueryV1) (*ProblemV1, error)
 	ListProblemsV1(context.Context, *ProblemListQueryV1) (*ProblemListV1, error)
 	RemoveProblemV1(context.Context, *ProblemQueryV1) (*ProblemResultV1, error)
@@ -83,8 +105,14 @@ type OcpProblemServer interface {
 type UnimplementedOcpProblemServer struct {
 }
 
+func (UnimplementedOcpProblemServer) MultiCreateProblemV1(context.Context, *ProblemListV1) (*ListResultSaveV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MultiCreateProblemV1 not implemented")
+}
 func (UnimplementedOcpProblemServer) CreateProblemV1(context.Context, *ProblemV1) (*ResultSaveV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateProblemV1 not implemented")
+}
+func (UnimplementedOcpProblemServer) UpdateProblemV1(context.Context, *ProblemV1) (*ResultSaveV1, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateProblemV1 not implemented")
 }
 func (UnimplementedOcpProblemServer) DescribeProblemV1(context.Context, *ProblemQueryV1) (*ProblemV1, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DescribeProblemV1 not implemented")
@@ -108,6 +136,24 @@ func RegisterOcpProblemServer(s grpc.ServiceRegistrar, srv OcpProblemServer) {
 	s.RegisterService(&OcpProblem_ServiceDesc, srv)
 }
 
+func _OcpProblem_MultiCreateProblemV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProblemListV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OcpProblemServer).MultiCreateProblemV1(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ocp.problem.api.OcpProblem/MultiCreateProblemV1",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OcpProblemServer).MultiCreateProblemV1(ctx, req.(*ProblemListV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _OcpProblem_CreateProblemV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ProblemV1)
 	if err := dec(in); err != nil {
@@ -122,6 +168,24 @@ func _OcpProblem_CreateProblemV1_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(OcpProblemServer).CreateProblemV1(ctx, req.(*ProblemV1))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _OcpProblem_UpdateProblemV1_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProblemV1)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OcpProblemServer).UpdateProblemV1(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ocp.problem.api.OcpProblem/UpdateProblemV1",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OcpProblemServer).UpdateProblemV1(ctx, req.(*ProblemV1))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -188,8 +252,16 @@ var OcpProblem_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*OcpProblemServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "MultiCreateProblemV1",
+			Handler:    _OcpProblem_MultiCreateProblemV1_Handler,
+		},
+		{
 			MethodName: "CreateProblemV1",
 			Handler:    _OcpProblem_CreateProblemV1_Handler,
+		},
+		{
+			MethodName: "UpdateProblemV1",
+			Handler:    _OcpProblem_UpdateProblemV1_Handler,
 		},
 		{
 			MethodName: "DescribeProblemV1",

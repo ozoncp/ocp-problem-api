@@ -7,23 +7,47 @@ import (
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/ozoncp/ocp-problem-api/internal/utils"
+	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 )
 
+type repoPgMetricHolder struct {
+	addCounter *prometheus.CounterVec
+	updateCounter *prometheus.CounterVec
+	describeCounter *prometheus.CounterVec
+	listCounter *prometheus.CounterVec
+	removeCounter *prometheus.CounterVec
+}
+
 type repoPg struct {
+	RepoRemover
+	connectUrl string
 	pool *pgxpool.Pool
+	metricHolder *repoPgMetricHolder
 }
 
 func (rp *repoPg) AddEntities(ctx context.Context, problems []utils.Problem) error {
-	var err error
+	var errMethod error
+	defer func() {
+		if errMethod != nil {
+			rp.metricHolder.addCounter.WithLabelValues("error").Inc()
+		} else {
+			rp.metricHolder.addCounter.WithLabelValues("success").Inc()
+		}
+	}()
+
+	conn, errMethod := rp.getConnection()
+	if errMethod != nil {
+		return errMethod
+	}
+
 	batch := &pgx.Batch{}
 	insertCount := 0
 
 	findProblems, _ := rp.findProblems(ctx, problems)
 	for _, problem := range problems {
 		if _, ok := findProblems[problem.Id]; ok {
-		//if p, _ := rp.DescribeEntity(ctx, problem.Id); p != nil {
-			err = NewRepoError(fmt.Sprintf("duplicate problem #%d", problem.Id), &problem, err)
+			errMethod = NewRepoError(fmt.Sprintf("duplicate problem #%d", problem.Id), &problem, errMethod)
 		} else {
 			batch.Queue(
 				"insert into problem (id, user_id, message) values($1, $2, $3);",
@@ -35,21 +59,87 @@ func (rp *repoPg) AddEntities(ctx context.Context, problems []utils.Problem) err
 		}
 	}
 
-	br := rp.pool.SendBatch(ctx, batch)
+	br := conn.SendBatch(ctx, batch)
 	for i := 0; i < insertCount; i++ {
 		if ct, err := br.Exec(); ct.Insert() {
 			if err != nil {
-				err = NewRepoError(err.Error(), nil, err)
+				errMethod = NewRepoError(err.Error(), nil, err)
 			} else if ct.RowsAffected() != 1 {
-				err = NewRepoError(fmt.Sprintf("rows in unaffected: %v", ct.String()), nil, err)
+				errMethod = NewRepoError(fmt.Sprintf("rows in unaffected: %v", ct.String()), nil, err)
 			}
 		}
 	}
 
-	return err
+	return errMethod
+}
+
+func (rp *repoPg) UpdateEntity(ctx context.Context, problem utils.Problem) error {
+	var errMethod error
+	defer func() {
+		if errMethod != nil {
+			rp.metricHolder.updateCounter.WithLabelValues("error").Inc()
+		} else {
+			rp.metricHolder.updateCounter.WithLabelValues("success").Inc()
+		}
+	}()
+
+	conn, errMethod := rp.getConnection()
+	if errMethod != nil {
+		return errMethod
+	}
+
+	localProblem, errMethod := rp.DescribeEntity(ctx, problem.Id)
+	if errMethod != nil {
+		return errMethod
+	}
+
+	if localProblem == nil {
+		errMethod = errors.New("problem not found")
+		return errMethod
+	}
+
+	ct, errMethod := conn.Exec(
+		ctx,
+		"update problem set user_id=$1, message=$2 where id = $3;",
+		problem.UserId,
+		problem.Text,
+		problem.Id,
+		)
+
+	if errMethod != nil {
+		return errMethod
+	}
+
+	if ct.RowsAffected() != 1 {
+		errMethod = errors.New("problem is not updated")
+		return errMethod
+	}
+
+	return errMethod
+}
+
+func (rp *repoPg) getConnection() (*pgxpool.Pool, error) {
+	if rp.pool != nil {
+		return rp.pool, nil
+	}
+
+	pool, err := pgxpool.Connect(context.Background(), rp.connectUrl)
+	if err != nil {
+		return nil ,err
+	}
+
+	rp.pool = pool
+	return rp.pool, nil
 }
 
 func (rp *repoPg) findProblems(ctx context.Context, problems []utils.Problem) (map[uint64]utils.Problem, error) {
+	var errMethod error
+
+	conn, errMethod := rp.getConnection()
+	if errMethod != nil {
+		return nil, errMethod
+	}
+
 	problemSize := len(problems)
 	paramsList := make([]string, 0, problemSize)
 	problemIds := make([]interface{}, 0, problemSize)
@@ -59,68 +149,93 @@ func (rp *repoPg) findProblems(ctx context.Context, problems []utils.Problem) (m
 	}
 
 	params := strings.Join(paramsList, ",")
-	rows, err := rp.pool.Query(
+	rows, errMethod := conn.Query(
 		ctx,
 		fmt.Sprintf("select id, user_id, message from problem where id in (%v)", params),
 		problemIds...)
-	if err != nil {
-		return nil, err
+	if errMethod != nil {
+		return nil, errMethod
 	}
 
 	result := map[uint64]utils.Problem{}
 	for rows.Next() {
 		problem := utils.Problem{}
-		err := rows.Scan(&problem.Id, &problem.UserId, &problem.Text)
-		if err != nil {
-			return nil, err
+		errMethod = rows.Scan(&problem.Id, &problem.UserId, &problem.Text)
+		if errMethod != nil {
+			return nil, errMethod
 		}
 
 		result[problem.Id] = problem
 	}
 
-	return result, nil
+	return result, errMethod
 }
 
 func (rp *repoPg) DescribeEntity(ctx context.Context, entityId uint64) (*utils.Problem, error) {
-	rows, err := rp.pool.Query(ctx, "select id, user_id, message from problem where id = $1;", entityId)
-	if err != nil {
-		return nil, err
+	var errMethod error
+	defer func() {
+		if errMethod != nil {
+			rp.metricHolder.describeCounter.WithLabelValues("error").Inc()
+		} else {
+			rp.metricHolder.describeCounter.WithLabelValues("success").Inc()
+		}
+	}()
+
+	conn, errMethod := rp.getConnection()
+	if errMethod != nil {
+		return nil, errMethod
+	}
+
+	rows, errMethod := conn.Query(ctx, "select id, user_id, message from problem where id = $1;", entityId)
+	if errMethod != nil {
+		return nil, errMethod
 	}
 
 	resultProblem := &utils.Problem{}
 	if !rows.Next() {
-		return nil, errors.New("problem not found")
+		errMethod = errors.New("problem not found")
+		return nil, errMethod
 	}
 
-	for rows.Next() {
-		err := rows.Scan(&resultProblem.Id, &resultProblem.UserId, &resultProblem.Text)
-		if err != nil {
-			return nil, err
-		}
+	if err := rows.Scan(&resultProblem.Id, &resultProblem.UserId, &resultProblem.Text); err != nil {
+		errMethod = err
+		return nil, errMethod
 	}
 
-	return resultProblem, nil
+	return resultProblem, errMethod
 }
 
 func (rp *repoPg) ListEntities(ctx context.Context, limit, offset uint64) ([]utils.Problem, error) {
 	var (
 		rows pgx.Rows
-		err error
+		errMethod error
 	)
+	defer func() {
+		if errMethod != nil {
+			rp.metricHolder.listCounter.WithLabelValues("error").Inc()
+		} else {
+			rp.metricHolder.listCounter.WithLabelValues("success").Inc()
+		}
+	}()
+
+	conn, errMethod := rp.getConnection()
+	if errMethod != nil {
+		return nil, errMethod
+	}
 
 	switch {
 	case limit == 0 && offset == 0:
-		rows, err = rp.pool.Query(ctx, "select id, user_id, message from problem;")
+		rows, errMethod = conn.Query(ctx, "select id, user_id, message from problem;")
 	case limit > 0 && offset == 0:
-		rows, err = rp.pool.Query(ctx, "select id, user_id, message from problem limit $1;", limit)
+		rows, errMethod = conn.Query(ctx, "select id, user_id, message from problem limit $1;", limit)
 	case limit == 0 && offset > 0:
-		rows, err = rp.pool.Query(ctx, "select id, user_id, message from problem offset $1;", offset)
+		rows, errMethod = conn.Query(ctx, "select id, user_id, message from problem offset $1;", offset)
 	default:
-		rows, err = rp.pool.Query(ctx, "select id, user_id, message from problem limit $1 offset $2;", limit, offset)
+		rows, errMethod = conn.Query(ctx, "select id, user_id, message from problem limit $1 offset $2;", limit, offset)
 	}
 
-	if err != nil {
-		return nil, err
+	if errMethod != nil {
+		return nil, errMethod
 	}
 
 	result := make([]utils.Problem, 0, limit)
@@ -133,29 +248,86 @@ func (rp *repoPg) ListEntities(ctx context.Context, limit, offset uint64) ([]uti
 		result = append(result, problem)
 	}
 
-	return result, nil
+	return result, errMethod
 }
 
 func (rp *repoPg) RemoveEntity(ctx context.Context, entityId uint64) error {
-	ct, err := rp.pool.Exec(ctx, "delete from problem where id = $1;", entityId)
-	if err != nil {
-		return err
+	var errMethod error
+	defer func() {
+		if errMethod != nil {
+			rp.metricHolder.removeCounter.WithLabelValues("error").Inc()
+		} else {
+			rp.metricHolder.removeCounter.WithLabelValues("success").Inc()
+		}
+	}()
+
+	conn, errMethod := rp.getConnection()
+	if errMethod != nil {
+		return errMethod
+	}
+
+	ct, errMethod := conn.Exec(ctx, "delete from problem where id = $1;", entityId)
+	if errMethod != nil {
+		return errMethod
 	}
 
 	if ct.RowsAffected() != 1 {
-		return errors.New("problem is not removed")
+		errMethod = errors.New("problem is not removed")
+		return errMethod
 	}
 
-	return nil
+	return errMethod
 }
 
-func NewPgRepo(connectUrl string) (RepoRemover, error) {
-	pool, err := pgxpool.Connect(context.Background(), connectUrl)
-	if err != nil {
-		return nil ,err
+func makeCounterVecMetric(name, help string, labels []string) *prometheus.CounterVec  {
+	return prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: name,
+			Help: help,
+		},
+		labels,
+	)
+}
+
+func NewPgRepo(connectUrl string) RepoRemover {
+	metricHolder := &repoPgMetricHolder{
+		addCounter: makeCounterVecMetric(
+			"pg_repo_add_counter",
+			"Number of AddEntities method calls",
+			[]string{"status"},
+		),
+		updateCounter: makeCounterVecMetric(
+			"pg_repo_update_counter",
+			"Number of UpdateEntity method calls",
+			[]string{"status"},
+		),
+		describeCounter: makeCounterVecMetric(
+			"pg_repo_describe_counter",
+			"Number of DescribeEntity method calls",
+			[]string{"status"},
+		),
+		listCounter: makeCounterVecMetric(
+			"pg_repo_list_counter",
+			"Number of ListEntities method calls",
+			[]string{"status"},
+		),
+		removeCounter: makeCounterVecMetric(
+			"pg_repo_remove_counter",
+			"Number of RemoveEntity method calls",
+			[]string{"status"},
+		),
 	}
 
+	prometheus.MustRegister(
+		metricHolder.addCounter,
+		metricHolder.updateCounter,
+		metricHolder.describeCounter,
+		metricHolder.listCounter,
+		metricHolder.removeCounter,
+		)
+
 	return &repoPg{
-		pool: pool,
-	}, nil
+		connectUrl: connectUrl,
+		metricHolder: metricHolder,
+	}
 }

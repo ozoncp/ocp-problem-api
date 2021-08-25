@@ -7,6 +7,7 @@ import (
 
 type Repo interface {
 	AddEntities(ctx context.Context, problems []utils.Problem) error
+	UpdateEntity(ctx context.Context, problems utils.Problem) error
 	ListEntities(ctx context.Context, limit, offset uint64) ([]utils.Problem, error)
 	DescribeEntity(ctx context.Context, entityId uint64) (*utils.Problem, error)
 }

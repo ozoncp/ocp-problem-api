@@ -1,25 +1,26 @@
 package repo
 
-import "github.com/ozoncp/ocp-problem-api/internal/utils"
+import (
+	"errors"
+	"github.com/ozoncp/ocp-problem-api/internal/utils"
+)
 
 type repoError struct {
 	problem *utils.Problem
-	message string
 	err error
 }
 
 func (re *repoError) Error() string {
-	return re.message
+	return re.err.Error()
 }
 
 func (re *repoError) Unwrap() error {
-	return re.err
+	return errors.Unwrap(re.err)
 }
 
 func NewRepoError(message string, problem *utils.Problem, err error) error {
 	return &repoError{
-		message: message,
 		problem: problem,
-		err: err,
+		err: utils.NewWrappedError(message, err),
 	}
 }

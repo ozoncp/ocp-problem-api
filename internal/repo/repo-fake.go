@@ -9,6 +9,7 @@ import (
 )
 
 type fakeRepoProblem struct {
+	RepoRemover
 	*sync.Mutex
 	store []utils.Problem
 }
@@ -27,6 +28,17 @@ func (frp *fakeRepoProblem) AddEntities(_ context.Context, problems []utils.Prob
 	}
 
 	return err
+}
+
+func (frp *fakeRepoProblem) UpdateEntity(_ context.Context, problem utils.Problem) error {
+	for i, localProblem := range frp.store {
+		if localProblem.Id == problem.Id {
+			frp.store[i] = problem
+			return nil
+		}
+	}
+
+	return errors.New("problem is not found")
 }
 
 func (frp *fakeRepoProblem) ListEntities(_ context.Context, limit, offset uint64) ([]utils.Problem, error) {

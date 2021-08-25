@@ -16,6 +16,10 @@ message ResultSaveV1 {
   uint64 id = 1;
 }
 
+message ListResultSaveV1 {
+  repeated ResultSaveV1 list = 1;
+}
+
 message ProblemQueryV1 {
   uint64 id = 1;
 }
@@ -42,9 +46,23 @@ message ProblemResultV1 {
 }
 
 service OcpProblem {
+  rpc MultiCreateProblemV1(ProblemListV1) returns (ListResultSaveV1) {
+    option (google.api.http) = {
+      post: "/v1/multi-create"
+      body: "*"
+    };
+  }
+
   rpc CreateProblemV1(ProblemV1) returns (ResultSaveV1) {
     option (google.api.http) = {
       post: "/v1/create"
+      body: "*"
+    };
+  }
+
+  rpc UpdateProblemV1(ProblemV1) returns (ResultSaveV1) {
+    option (google.api.http) = {
+      put: "/v1/update/{id}"
       body: "*"
     };
   }
