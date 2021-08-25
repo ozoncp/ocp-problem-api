@@ -3,6 +3,8 @@ package ocp_problem_api
 import (
 	"context"
 	desc "github.com/ozoncp/ocp-problem-api/pkg/ocp-problem-api"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func (pa *OcpProblemAPI) ListProblemsV1(ctx context.Context, listQuery *desc.ProblemListQueryV1) (*desc.ProblemListV1, error) {
@@ -13,7 +15,7 @@ func (pa *OcpProblemAPI) ListProblemsV1(ctx context.Context, listQuery *desc.Pro
 	list, err := pa.repo.ListEntities(ctx, listQuery.Limit, listQuery.Offset)
 	if err != nil {
 		pa.logError("ListProblemsV1", listQuery, err)
-		return nil, err
+		return nil, status.Error(codes.Unknown, err.Error())
 	}
 
 	filter := listQuery.Filter

@@ -1,6 +1,7 @@
 package saver
 
 import (
+	"context"
 	"github.com/ozoncp/ocp-problem-api/internal/flusher"
 	"github.com/ozoncp/ocp-problem-api/internal/utils"
 	"time"
@@ -60,7 +61,7 @@ func (s *saver) flush() {
 		}
 	}
 
-	for _, errProblem := range s.flusher.Flush(problemList) {
+	for _, errProblem := range s.flusher.Flush(context.Background(), problemList) {
 		if s.chErrorReader != nil {
 			s.chErrorReader <- errProblem
 		}

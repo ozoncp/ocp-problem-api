@@ -2,14 +2,24 @@ package ocp_problem_api
 
 import (
 	"context"
+	"github.com/opentracing/opentracing-go"
 	"github.com/ozoncp/ocp-problem-api/internal/utils"
 	desc "github.com/ozoncp/ocp-problem-api/pkg/ocp-problem-api"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"strconv"
 )
 
 func (pa *OcpProblemAPI) MultiCreateProblemV1(
 	ctx context.Context,
 	problemList *desc.ProblemListV1,
 	) (*desc.ListResultSaveV1, error) {
+
+	tracer := opentracing.GlobalTracer()
+	span := tracer.StartSpan("MultiCreateProblemV1")
+	defer span.Finish()
+
+	span.SetBaggageItem("total_count", strconv.Itoa(len(problemList.List)))
 
 	problemSize := len(problemList.List)
 	result := &desc.ListResultSaveV1{List: make([]*desc.ResultSaveV1, 0, problemSize)}
@@ -23,10 +33,11 @@ func (pa *OcpProblemAPI) MultiCreateProblemV1(
 		})
 	}
 
-	err := pa.repo.AddEntities(ctx, problems)
+	ctx = opentracing.ContextWithSpan(ctx, span)
+	_, err := pa.flusher.FlushWithError(ctx, problems)
 	if err != nil {
 		pa.logError("CreateProblemV1", problemList, err)
-		return nil, err
+		return nil, status.Error(codes.AlreadyExists, err.Error())
 	}
 
 	pa.logResult("CreateProblemV1", problemList, result)

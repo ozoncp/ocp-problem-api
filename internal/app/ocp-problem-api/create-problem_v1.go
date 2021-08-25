@@ -4,6 +4,8 @@ import (
 	"context"
 	"github.com/ozoncp/ocp-problem-api/internal/utils"
 	desc "github.com/ozoncp/ocp-problem-api/pkg/ocp-problem-api"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func (pa *OcpProblemAPI) CreateProblemV1(ctx context.Context, problem *desc.ProblemV1) (*desc.ResultSaveV1, error) {
@@ -17,7 +19,7 @@ func (pa *OcpProblemAPI) CreateProblemV1(ctx context.Context, problem *desc.Prob
 
 	if err != nil {
 		pa.logError("CreateProblemV1", problem, err)
-		return nil, err
+		return nil, status.Error(codes.AlreadyExists, err.Error())
 	}
 
 	result := &desc.ResultSaveV1{Id: problem.Id}
